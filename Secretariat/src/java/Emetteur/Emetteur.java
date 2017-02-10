@@ -26,7 +26,7 @@ public class Emetteur {
     private static MapMessage mapMessage = null;
     
     public static void main(String[] args) {
-        String id_etudiant, nom_etudiant, prenom_etudiant, id_departement;
+        String id_etudiant, nom, prenom, id_departement;
 
         try {
             connection = (TopicConnection)fabriqueConnexionJMS.createConnection();
@@ -39,11 +39,11 @@ public class Emetteur {
             while (id_etudiant.compareTo("") > 0){
                 mapMessage.setString("id_etudiant", id_etudiant);
                 System.out.println("Nom de l'étudiant : ");
-                nom_etudiant = Saisie.lectureChaine();
-                mapMessage.setString("nom_etudiant", nom_etudiant);
+                nom = Saisie.lectureChaine();
+                mapMessage.setString("nom", nom);
                 System.out.println("Prénom de l'étudiant : ");
-                prenom_etudiant = Saisie.lectureChaine();
-                mapMessage.setString("prenom_etudiant", prenom_etudiant);
+                prenom = Saisie.lectureChaine();
+                mapMessage.setString("prenom", prenom);
                 System.out.println("Département de l'étudiant : ");
                 id_departement = Saisie.lectureChaine();
                 mapMessage.setString("id_departement", id_departement);

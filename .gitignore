@@ -17,3 +17,7 @@ hs_err_pid*
 build.xml
 manifest.mf
 nbproject/
+/DirecteurEtudes/build/
+/DirecteurEtudes/dist/
+/Secretariat/build/
+/Secretariat/dist/

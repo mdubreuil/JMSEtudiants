@@ -3,6 +3,7 @@ package Emetteur;
 import javax.annotation.Resource;
 import javax.jms.ConnectionFactory;
 import javax.jms.MapMessage;
+import javax.jms.Queue;
 import javax.jms.Topic;
 import javax.jms.TopicConnection;
 import javax.jms.TopicPublisher;
@@ -15,9 +16,11 @@ import javax.jms.TopicSession;
  * 
  */
 public class Emetteur {
+    @Resource(mappedName = "Confirmation")
+    private static Queue confirmation;
     @Resource(mappedName = "FabriqueConnexionJMS")
     private static ConnectionFactory fabriqueConnexionJMS;
-    @Resource(mappedName = "Inscription")
+    @Resource(mappedName = "Inscription")   
     
     private static Topic inscriptions;
     private static TopicConnection connection = null;
@@ -46,7 +49,8 @@ public class Emetteur {
                 mapMessage.setString("prenom", prenom);
                 System.out.println("Département de l'étudiant : ");
                 id_departement = Saisie.lectureChaine();
-                mapMessage.setString("id_departement", id_departement);
+                mapMessage.setString("id_departement", id_departement);                
+                mapMessage.setJMSReplyTo(confirmation);
                 producteur.publish(mapMessage);
                 System.out.println("Identifiant de l'étudiant (Vide pour arrêter) : ");
                 id_etudiant = Saisie.lectureChaine();

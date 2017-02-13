@@ -20,7 +20,7 @@ public class Emetteur {
     private static Queue confirmation;
     @Resource(mappedName = "FabriqueConnexionJMS")
     private static ConnectionFactory fabriqueConnexionJMS;
-    @Resource(mappedName = "Inscription")   
+    @Resource(mappedName = "InscriptionTopic")   
     
     private static Topic inscriptions;
     private static TopicConnection connection = null;

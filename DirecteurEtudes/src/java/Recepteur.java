@@ -1,7 +1,6 @@
 import javax.annotation.Resource;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.MapMessage;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Queue;

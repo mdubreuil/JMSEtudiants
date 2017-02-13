@@ -1,6 +1,8 @@
 package pkgConso;
 
 import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,6 +20,7 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.naming.InitialContext;
+import javax.sql.DataSource;
 
 /**
  *
@@ -38,6 +41,18 @@ public class MdbInscription implements MessageListener {
     
     static final Logger logger = Logger.getLogger("Inscriptions");
     
+    // Variables permettant d'insérer les inscriptions en BD
+    @Resource(mappedName = "jdbc/Inscription1")
+    private static DataSource dataSource1;
+    @Resource(mappedName = "jdbc/Inscription2")
+    private static DataSource dataSource2;
+    private PreparedStatement ps = null;
+    private java.sql.Connection c = null;
+    
+    // Statut des transactions dans les bases inscription1 et inscription2
+    private boolean ajoutBd1;
+    private boolean ajoutBd2;
+    
     public MdbInscription() {
         try{
             FileHandler fh=new FileHandler("Inscriptions.log");
@@ -52,15 +67,19 @@ public class MdbInscription implements MessageListener {
         String msg;
         try {
             if (message instanceof MapMessage) {
-                mapMessage = (MapMessage) message;
-                // TODO : Ajouter les messages en BD
+                // Récupération des informations saisies par l'application Secretariat via objet MapMessage
+                mapMessage = (MapMessage) message;             
                 msg = "Numéro de l'étudiant : " + mapMessage.getString("id_etudiant") + "\n";
                 msg += "Nom de l'étudiant : " + mapMessage.getString("nom") + "\n";
                 msg += "Prénom de l'étudiant : " + mapMessage.getString("prenom") + "\n";
                 msg += "Département de l'étudiant : " + mapMessage.getString("id_departement") + "\n";
-                logger.log(Level.INFO, "{0}", msg);                
-                // TODO : true/false en paramètre = si l'ajout est bon en BD
-                confirmerTransactionBd(mapMessage,true,true);
+                // Ajout des inscriptions dans les bases inscription1 et inscription2
+                ajoutBd1(mapMessage.getString("id_etudiant"),mapMessage.getString("nom"),mapMessage.getString("prenom"),mapMessage.getString("id_departement"));
+                ajoutBd2(mapMessage.getString("id_etudiant"),mapMessage.getString("nom"),mapMessage.getString("prenom"),mapMessage.getString("id_departement"));
+                // Ecriture du message dans les logs du MDB
+                logger.log(Level.INFO, "{0}", msg);
+                // Acquittement de l'inscription pour l'application DirecteurEtudes
+                confirmerTransactionBd(mapMessage);
             }
         } catch (Exception e) {
             mdc.setRollbackOnly();
@@ -68,12 +87,46 @@ public class MdbInscription implements MessageListener {
         }
     }
     
-    private void confirmerTransactionBd(MapMessage message, boolean ajoutBd1, boolean ajoutBd2){
+    public void ajoutBd1 (String id_etudiant,String nom, String prenom, String id_departement){
+        try {
+            c = dataSource1.getConnection("inscription1", "inscription1");            
+            String requete = "insert into inscription1 (id_etudiant, nom, prenom, id_departement)";
+            requete += " values (?,?,?,?)";            
+            ps = c.prepareStatement(requete);
+            ps.setString(1,id_etudiant);
+            ps.setString(2,nom);
+            ps.setString(3,prenom);
+            ps.setString(4,id_departement);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            ajoutBd1 = false;
+            Logger.getLogger(MdbInscription.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void ajoutBd2 (String id_etudiant,String nom, String prenom, String id_departement){
+        try {
+            c = dataSource2.getConnection("inscription2", "inscription2");            
+            String requete = "insert into inscription2 (id_etudiant, nom, prenom, id_departement)";
+            requete += " values (?,?,?,?)";            
+            ps = c.prepareStatement(requete);
+            ps.setString(1,id_etudiant);
+            ps.setString(2,nom);
+            ps.setString(3,prenom);
+            ps.setString(4,id_departement);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            ajoutBd2 = false;
+            Logger.getLogger(MdbInscription.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void confirmerTransactionBd(MapMessage message){
         TextMessage acquittement = null;
         ConnectionFactory fabriqueConnexionJMS;
         InitialContext ctx;
         Connection connection = null;
-        String enregistrementBd1 = "Succès", enregistrementBd2 = "Succès";
+        String enregistrementBd1 = "", enregistrementBd2 = "";
         
         try {
             ctx = new InitialContext();
@@ -82,7 +135,17 @@ public class MdbInscription implements MessageListener {
             Session session = connection.createSession(false, 0);
             MessageProducer producteur = session.createProducer(message.getJMSReplyTo());
             acquittement = session.createTextMessage();
-            // TODO : Changer le message en fonction de ajoutBd
+            // Modification du statut à envoyer dans le message d'acquittement
+            if(ajoutBd1){
+                enregistrementBd1 = "Succès";
+            } else {
+                enregistrementBd1 = "Echec";
+            }            
+            if(ajoutBd2){
+                enregistrementBd2 = "Succès";
+            } else {
+                enregistrementBd2 = "Echec";
+            }            
             acquittement.setText("\n Inscription 1 | " + message.getString("nom") + " | " + message.getString("prenom") + " | " + enregistrementBd1 + "\n" +
                                  "Inscription 2 | " + message.getString("nom") + " | " + message.getString("prenom") + " | " + enregistrementBd2 );
             producteur.send(acquittement);
